@@ -20,3 +20,11 @@ export const BASE_APR_BY_BAND = {
 }
 
 export const OFFER_TERMS_YEARS = [5, 10, 15] as const;
+
+export const URLS = {
+    CREATE_QUOTE: '/api/quotes'
+} as const;
+
+export const ROUTES = {
+    VIEW_QUOTE: '/quotes'
+} as const;

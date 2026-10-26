@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
 
         return NextResponse.json({
             success: true,
-            data: { ...result, fullName, email },
+            data: { ...result, fullName, email, id: 123 },
             message: 'Data processed successfully'
         });
     } catch (error) {

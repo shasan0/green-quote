@@ -21,6 +21,7 @@ export default function Input({ id, label, name, type, error, className, contain
                     type={type}
                     name={name}
                     id={inputId}
+                    aria-invalid={!!error}
                     className={mergeClasses(
                         'flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm transition-colors',
                         'placeholder:text-neutral-400',
