@@ -1,35 +1,46 @@
-import { generateQuote } from '@/src/lib/pricing';
-import { createQuoteSchema } from '@/src/lib/schemas';
-import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
+import { requireUser } from '@/src/lib/auth/session';
+import { logger } from '@/src/lib/logger';
+import { createQuoteSchema } from '@/src/lib/schemas';
+import { createQuote } from '@/src/services/quote';
+import { NextRequest, NextResponse } from 'next/server';
+import { handleApiError } from '@/src/utils/api-error-handler';
 
-export async function POST(req: NextRequest, res: NextResponse) {
-    try {
-        const body = await req.json();
-        const { success, error, data } = createQuoteSchema.safeParse(body);
+export async function POST(req: NextRequest) {
+  let body: unknown;
 
-        if (!success) {
-            return NextResponse.json(
-                {
-                    error: 'Validation failed',
-                    details: z.treeifyError(error)
-                },
-                { status: 400 }
-            );
-        }
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid or missing JSON payload' }, { status: 400 });
+  }
 
-        const { fullName, email, monthlyConsumptionKw, systemSizeKw, downPayment } = data;
-        const result = generateQuote({ monthlyConsumptionKw, systemSizeKw, downPayment });
+  try {
+    const [user, validationResult] = await Promise.all([
+      requireUser(req),
+      Promise.resolve(createQuoteSchema.safeParse(body)),
+    ]);
 
-        return NextResponse.json({
-            success: true,
-            data: { ...result, fullName, email, id: 123 },
-            message: 'Data processed successfully'
-        });
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Invalid or missing JSON payload' },
-            { status: 400 }
-        );
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: z.treeifyError(validationResult.error),
+        },
+        { status: 400 },
+      );
     }
+
+    const quote = await createQuote(user, validationResult.data);
+
+    if (quote) {
+      logger.info('Quote created');
+      return NextResponse.json(
+        { quote },
+        { status: 201, headers: { Location: `/api/quotes/${quote.id}` } },
+      );
+    }
+  } catch (error) {
+    return handleApiError(error);
+  }
 }

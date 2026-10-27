@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: greenquote
+      POSTGRES_PASSWORD: greenquote
+      POSTGRES_DB: greenquote
+    ports:
+      - '5432:5432'
+    volumes:
+      - greenquote-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U greenquote -d greenquote']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (32+ chars), e.g. in a .env file next to this compose file}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgres://greenquote:${POSTGRES_PASSWORD:-greenquote}@db:5432/greenquote
+    volumes:
+      - greenquote-data:/app/data
+
+volumes:
+  greenquote-data:

@@ -1,37 +1,44 @@
-const SAMPLE_QUOTE = [{
-    "currency": "USD",
-    "systemPrice": 14400,
-    "principalAmount": 14399,
-    "riskBand": "C",
-    "baseApr": 11.9,
-    "offers": [
-        {
-            "termYears": 5,
-            "apr": 11.9,
-            "principalUsed": 14399,
-            "monthlyPayment": 319.57
-        },
-        {
-            "termYears": 10,
-            "apr": 11.9,
-            "principalUsed": 14399,
-            "monthlyPayment": 205.75
-        },
-        {
-            "termYears": 15,
-            "apr": 11.9,
-            "principalUsed": 14399,
-            "monthlyPayment": 171.89
-        }
-    ],
-    "fullName": "Test",
-    "email": "brom.online7@gmail.com",
-    "id": 123,
-    "createdAt": "11/11/1990"
-}]
+import { generateQuote } from '../lib/pricing';
+import { create, findById, listAll, listByUser, QuoteRecord } from '../lib/repositories/quotes';
+import { User } from '../lib/repositories/users';
+import { CreateQuote } from '../lib/schemas';
+import { ApiError } from '../utils/api-errors';
 
-export const getQuoteById = (id: number) => {
-    return new Promise((resolve) => {
-        resolve(SAMPLE_QUOTE.find(q => q.id === id));
-    });
-}
+export const createQuote = async (user: User, input: CreateQuote): Promise<QuoteRecord | null> => {
+  const result = generateQuote(input);
+  const record = await create({
+    userId: user.id,
+    inputs: {
+      fullName: input.fullName,
+      email: input.email,
+      address: input.address,
+      monthlyConsumptionKw: input.monthlyConsumptionKw,
+      systemSizeKw: input.systemSizeKw,
+      downPayment: input.downPayment,
+    },
+    derived: {
+      currency: result.currency,
+      systemPrice: result.systemPrice,
+      principalAmount: result.principalAmount,
+      riskBand: result.riskBand,
+      baseApr: result.baseApr,
+    },
+    offers: result.offers,
+  });
+
+  return record;
+};
+
+export const getQuotesForUser = async (user: User, id: string) => {
+  const quote = await findById(id);
+  if (!quote) throw ApiError.notFound('Quote not found');
+  if (quote.userId !== user.id && user.role !== 'admin') throw ApiError.forbidden();
+  return quote;
+};
+
+export const listQuotesForUser = (user: User) => listByUser(user.id);
+
+export const listAllQuotes = (user: User, filter: { q?: string; userId?: string }) => {
+  if (user.role !== 'admin') throw ApiError.forbidden('Admin access required');
+  return listAll(filter);
+};

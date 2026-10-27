@@ -1,67 +1,65 @@
-export function QuoteDetails({ quote }) {
-    const { fullName, email, address, monthlyConsumptionKwh, systemSizeKw, downPayment, systemPrice, principalAmount, offers, riskBand, baseApr } = quote;
+import Link from 'next/link';
+import { RiskBand } from '../risk-band';
+import { QuoteRecord } from '@/src/lib/repositories/quotes';
+import { formatDate, formatMoney, formatNumber } from '@/src/utils/number-utils';
+import { ROUTES } from '@/src/lib/constants';
 
-    return (
-        <>
-            <section>
-                <h2>Your system</h2>
-                <div>
-                    <div>
-                        <div>System price</div>
-                        <div>{systemPrice}</div>
-                    </div>
-                    <div>
-                        <div>Amount financed</div>
-                        <div>{principalAmount}</div>
-                    </div>
-                    <div>
-                        <div>Risk band</div>
-                        <div>
-                            <p>{riskBand}</p>
-                        </div>
-                    </div>
-                </div>
-                <p>
-                    Base APR - {baseApr}.
-                </p>
-            </section>
-
-            <section>
-                <h2>Financing offers</h2>
-                <ul>
-                    {offers.map((o) => (
-                        <li key={o.termYears}>
-                            <div>{o.termYears} years</div>
-                            <p>{o.monthlyPayment}</p>
-                            <p>per month</p>
-                            <dl>
-                                <div>APR</div>
-                                <div>{o.apr}</div>
-                                <div>Principal</div>
-                                <div>{o.principalUsed}</div>
-                            </dl>
-                        </li>
-                    ))}
-                </ul>
-            </section>
-
-            <section>
-                <h2 id="inputs-heading">Your Details</h2>
-                <div>
-                    <div>Name</div>
-                    <div>{fullName}</div>
-                    <div>Email</div>
-                    <div>{email}</div>
-                    <div>Address</div>
-                    <div>{address}</div>
-                    <div>Monthly consumption</div>
-                    <div>{monthlyConsumptionKwh} kWh</div>
-                    <div>System size</div>
-                    <div>{systemSizeKw} kW</div>
-                    <div>Down payment</div>
-                    <div>{downPayment}</div>
-                </div>
-            </section>
-        </>
-    )
+export function QuoteDetails({
+  quotes,
+  caption,
+  showOwner = false,
+}: {
+  quotes: QuoteRecord[];
+  caption: string;
+  showOwner?: boolean;
+}) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <caption className="visually-hidden">{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            {showOwner && <th scope="col">Customer</th>}
+            <th scope="col" className="num">
+              System size
+            </th>
+            <th scope="col" className="num">
+              Price
+            </th>
+            <th scope="col">Risk band</th>
+            <th scope="col">
+              <span className="visually-hidden">Details</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {quotes.map((q) => (
+            <tr key={q.id}>
+              <td>{formatDate(q.createdAt)}</td>
+              {showOwner && (
+                <td>
+                  {q.owner.fullName}
+                  <br />
+                  <span style={{ color: 'var(--ink-soft)', fontSize: '0.88rem' }}>
+                    {q.owner.email}
+                  </span>
+                </td>
+              )}
+              <td className="num">{formatNumber(q.inputs.systemSizeKw)} kW</td>
+              <td className="num">{formatMoney(q.derived.systemPrice, q.derived.currency)}</td>
+              <td>
+                <RiskBand band={q.derived.riskBand} />
+              </td>
+              <td>
+                <Link href={`${ROUTES.VIEW_QUOTE}/${q.id}`}>
+                  View<span className="visually-hidden"> quote from {formatDate(q.createdAt)}</span>
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
